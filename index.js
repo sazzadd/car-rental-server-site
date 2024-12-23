@@ -45,12 +45,23 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
+
     app.get("/cars/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await carsCollection.findOne(query);
       res.send(result);
     });
+    // gett all  posted by specific user
+    app.get("/myposted/:email", async (req, res) => {
+      const email = req.params.email; 
+   
+      const query = { hrEmail: email };  
+      // console.log(query)
+      const result = await carsCollection.find(query).toArray();
+      res.send(result); 
+    });
+    
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
