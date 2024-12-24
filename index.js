@@ -68,6 +68,18 @@ async function run() {
       const result = await carsCollection.deleteOne(query);
       res.send(result);
     });
+    // put upadte
+    app.put("/update-car/:id", async (req, res) => {
+      const id = req.params.id;
+      const carData = req.body;
+      const updated = {
+        $set: carData,
+      };
+      const query = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const result = await carsCollection.updateOne(query, updated, options);
+      res.send(result);
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
