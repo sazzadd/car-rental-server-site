@@ -85,7 +85,16 @@ async function run() {
     // booked collection api
     app.post("/add-booked", async (req, res) => {
       const bookedData = req.body;
-      console.log(bookedData);
+      const query = {
+        bookedEmail: bookedData.bookedEmail,
+        carId: bookedData.carId,
+      };
+
+      const alreadyExist = await bookCollection.findOne(query);
+      // console.log("if alredy exist", alreadyExist);
+      if (alreadyExist)
+        return res.status(403).send({ massage: "alredy exist" });
+      // console.log(bookedData);
       const result = await bookCollection.insertOne(bookedData);
 
       const filter = { _id: new ObjectId(bookedData.carId) };
@@ -93,6 +102,15 @@ async function run() {
         $inc: { count: 1 },
       };
       const updateCount = await carsCollection.updateOne(filter, update);
+      res.send(result);
+    });
+    app.get("/booked/:email", async (req, res) => {
+      // const bookedEmail = req.params.email;
+      // const query = { bookedEmail: bookedEmail };
+      const email = req.params.email;
+
+      const query = { bookedEmail: email };
+      const result = await bookCollection.find(query).toArray();
       res.send(result);
     });
   } finally {
