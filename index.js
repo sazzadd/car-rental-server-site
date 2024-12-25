@@ -24,7 +24,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   const carsCollection = client.db("car-rental").collection("cars");
-  const bookCollection = client.db("car-rental").collection("cars");
+  const bookCollection = client.db("car-rental").collection("booked");
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
@@ -46,7 +46,7 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
-   
+
     app.get("/cars/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -55,12 +55,12 @@ async function run() {
     });
     // gett all  posted by specific user
     app.get("/myposted/:email", async (req, res) => {
-      const email = req.params.email; 
-   
-      const query = { hrEmail: email };  
+      const email = req.params.email;
+
+      const query = { hrEmail: email };
       // console.log(query)
       const result = await carsCollection.find(query).toArray();
-      res.send(result); 
+      res.send(result);
     });
     // posted Car delete
     app.delete("/cars/:id", async (req, res) => {
@@ -85,12 +85,16 @@ async function run() {
     // booked collection api
     app.post("/add-booked", async (req, res) => {
       const bookedData = req.body;
-      console.log(newCar);
+      console.log(bookedData);
       const result = await bookCollection.insertOne(bookedData);
+
+      const filter = { _id: new ObjectId(bookedData.carId) };
+      const update = {
+        $inc: { count: 1 },
+      };
+      const updateCount = await carsCollection.updateOne(filter, update);
       res.send(result);
     });
-
-
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
