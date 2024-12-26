@@ -27,9 +27,9 @@ async function run() {
   const bookCollection = client.db("car-rental").collection("booked");
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.connect();
+    // // Send a ping to confirm a successful connection
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
@@ -37,7 +37,7 @@ async function run() {
     // cars apis
     app.post("/add-car", async (req, res) => {
       const newCar = req.body;
-      console.log(newCar);
+      // console.log(newCar);
       const result = await carsCollection.insertOne(newCar);
       res.send(result);
     });
@@ -82,21 +82,20 @@ async function run() {
       res.send(result);
     });
 
-    // booked collection api
     app.post("/add-booked", async (req, res) => {
       const bookedData = req.body;
+      bookedData.status = "confirmed"; // Add status field here
       const query = {
         bookedEmail: bookedData.bookedEmail,
         carId: bookedData.carId,
       };
-
+    
       const alreadyExist = await bookCollection.findOne(query);
-      // console.log("if alredy exist", alreadyExist);
       if (alreadyExist)
-        return res.status(403).send({ massage: "alredy exist" });
-      // console.log(bookedData);
+        return res.status(403).send({ message: "Already exists" });
+    
       const result = await bookCollection.insertOne(bookedData);
-
+    
       const filter = { _id: new ObjectId(bookedData.carId) };
       const update = {
         $inc: { count: 1 },
@@ -105,14 +104,78 @@ async function run() {
       res.send(result);
     });
     app.get("/booked/:email", async (req, res) => {
-      // const bookedEmail = req.params.email;
-      // const query = { bookedEmail: bookedEmail };
+    
       const email = req.params.email;
 
       const query = { bookedEmail: email };
       const result = await bookCollection.find(query).toArray();
       res.send(result);
     });
+    // Update booking by ID
+    // app.put("/booked/:id", async (req, res) => {
+    //   const id = req.params.id;
+    //   const updatedBooking = req.body;
+
+    //   const filter = { _id: new ObjectId(id) };
+    //   const updateDoc = {
+    //     $set: {
+    //       bookedStartDate: updatedBooking.bookedStartDate,
+    //       bookedEndDate: updatedBooking.bookedEndDate,
+    //     },
+    //   };
+
+    //   try {
+    //     const result = await bookCollection.updateOne(filter, updateDoc);
+    //     res.send(result);
+    //   } catch (error) {
+    //     console.error("Error updating booking:", error);
+    //     res.status(500).send({ message: "Failed to update booking" });
+    //   }
+    // });
+    app.put("/booked/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedBooking = req.body;
+    
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          bookedStartDate: updatedBooking.bookedStartDate,
+          bookedEndDate: updatedBooking.bookedEndDate,
+          status: updatedBooking.status || "confirmed", // Update status if provided
+        },
+      };
+    
+      try {
+        const result = await bookCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      } catch (error) {
+        console.error("Error updating booking:", error);
+        res.status(500).send({ message: "Failed to update booking" });
+      }
+    });
+    
+    // cancel
+    app.put("/booked/cancel/:id", async (req, res) => {
+      const id = req.params.id;
+      const { bookingStatus } = req.body;
+    
+      try {
+        const result = await client
+          .db("car-rental")
+          .collection("booked")
+          .updateOne(
+            { _id: new ObjectId(id) },
+            { $set: { status: bookingStatus || "cancelled" } } // Update status here
+          );
+    
+        res.send(result);
+      } catch (error) {
+        console.error("Error updating booking status:", error);
+        res.status(500).send({ message: "Failed to update booking status." });
+      }
+    });
+    
+    
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
